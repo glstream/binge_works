@@ -1,0 +1,13 @@
+dagster>=1.5.0
+dagit>=1.5.0
+dagster-graphql>=1.5.0
+dagster-postgres  # Correct package name for PostgreSQL integration
+psycopg2-binary>=2.9.6     # PostgreSQL driver
+requests>=2.31.0           # For API calls
+python-dotenv>=1.0.0       # For environment management
+httpx>=0.24.1              # Modern HTTP client (alternative to requests)
+pydantic>=2.4.0            # Data validation for API responses
+beautifulsoup4>=4.12.2   # HTML parsing (bs4)
+selenium>=4.11.2         # Browser automation (webdriver)
+pandas==2.2.2
+scipy==1.13.0

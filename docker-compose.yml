@@ -1,0 +1,35 @@
+version: "3"
+services:
+  dagster:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - dagster_home:/opt/dagster/dagster_home # Add a volume for Dagster home
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=dagster
+      - POSTGRES_USER=dagster_user
+      - POSTGRES_PASSWORD=dagster_password
+      - DAGSTER_HOME=/opt/dagster/dagster_home
+      # Add other environment variables for your APIs here
+    depends_on:
+      - postgres
+    command: ["dagster", "dev", "-h", "0.0.0.0"] # Fixed command
+
+  postgres:
+    image: postgres:15
+    ports:
+      - "5499:5432"
+    environment:
+      - POSTGRES_DB=dagster
+      - POSTGRES_USER=dagster_user
+      - POSTGRES_PASSWORD=dagster_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
+  dagster_home: # Added volume for Dagster home
