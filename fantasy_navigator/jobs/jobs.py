@@ -117,13 +117,19 @@ fantasy_navigator_hist_job = dg.define_asset_job(
         "dd_raw_redraft_data",
         "dd_player_ranks_redraft_loaded",
         "dd_player_ranks_formatted",
-        #Fantasy Navigator Pocessing
+        #Fantasy Navigator history Pocessing
         "create_sf_ranks_history",
         "truncate_sf_player_ranks_staging",
         "raw_player_asset_values_hist",
         "processed_player_ranks_hist",
         "load_sf_player_ranks_staging",
         "load_sf_player_ranks_hist",
+        #Fantasy Navigator current Pocessing
+        "raw_player_asset_values",
+        "processed_player_ranks",
+        "load_processed_player_ranks",
+        "load_future_draft_picks",
+        "fn_player_ranks_formatted"
         ],
     description="Job to update Fantasy Navigator history data weekly",
     op_retry_policy=dg.RetryPolicy(
