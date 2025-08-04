@@ -1,4 +1,4 @@
 # workspace.yaml
 load_from:
-  - python_module: binge_works # your first code location
+  - python_module: binge_works.definitions # your first code location
   - python_module: fantasy_navigator.definitions # your second code location

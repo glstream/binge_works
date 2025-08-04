@@ -69,7 +69,7 @@ from .constants import (
     BRIDGE_MOVIE_GENRES,
     # Delta Tables
     UPDATED_MOVIES,
-    #Fact Tables
+    #Facts
     FACT_MOVIE_REVIEWS,
     FACT_SHOW_REVIEWS,
     MOVIE_PERFORMANCE_FACT,
