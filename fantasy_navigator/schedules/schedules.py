@@ -27,14 +27,14 @@ cbs_projections_schedule = dg.ScheduleDefinition(
 espn_projections_schedule = dg.ScheduleDefinition(
     name="daily_espn_projections",
     cron_schedule="0 17 * * 1",  # Run at 13:00 UTC every Monday
-    job=cbs_projections_job,
+    job=espn_projections_job,
     description="Update ESPN projections data weekly on Monday at 13:00 UTC"
 )
 
 nfl_projections_schedule = dg.ScheduleDefinition(
     name="daily_nfl_projections",
     cron_schedule="0 17 * * 1",  # Run at 13:00 UTC every Monday
-    job=cbs_projections_job,
+    job=nfl_projections_job,
     description="Update NFL projections data weekly on Monday at 13:00 UTC"
 )
 

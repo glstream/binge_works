@@ -73,7 +73,7 @@ fact_movie_reviews_job = define_asset_job(
 
 fact_show_reviews_job = define_asset_job(
     name="fact_show_reviews_job",
-    selection="get_shows_for_reviews*",
+    selection=["create_fact_show_reviews", "get_shows_for_reviews*"],
     description="Job to update the show reviews fact table",
     partitions_def=daily_partitions_def
 )
@@ -81,7 +81,7 @@ fact_show_reviews_job = define_asset_job(
 movie_performance_fact_job = define_asset_job(
     name="movie_performance_fact_job",
     selection=[
-        "get_movie_details", 
+        "get_new_movie_details", 
         "load_movie_dim", 
         "load_genres_dim",
         "load_movie_performance_fact"
@@ -93,10 +93,10 @@ movie_performance_fact_job = define_asset_job(
 update_new_and_updated_movies_job = define_asset_job(
     name="update_new_and_updated_movies_job",
     selection=[
-        "get_movie_augmentation",
-        "insert_movie_augmentation",
-        "get_movie_ids_for_details",
-        "get_movie_details", 
+        "get_new_movies",
+        "insert_new_movies",
+        "get_new_movie_ids_for_details",
+        "get_new_movie_details",
         "updated_movies_api",
         "updated_movie_details",
         "load_movie_dim",

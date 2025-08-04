@@ -8,12 +8,12 @@ import time
     name="load_movie_dim",
     required_resource_keys={"postgres"},
     kinds={"python", "postgres", "table"},
-    deps=[dg.AssetKey("get_movie_details"), dg.AssetKey("updated_movie_details")],
+    deps=[dg.AssetKey("get_new_movie_details"), dg.AssetKey("updated_movie_details")],
     partitions_def=movie_aug_partitions_def,
 )
 def load_movie_dim(
     context: dg.AssetExecutionContext, 
-    get_movie_details: List[Dict[str, Any]],
+    get_new_movie_details: List[Dict[str, Any]],
     updated_movie_details: List[Dict[str, Any]]
     ):       
     """
@@ -21,11 +21,11 @@ def load_movie_dim(
 
     Args:
         context (dg.AssetExecutionContext): _description_
-        get_movie_details (_type_): _description_
+        get_new_movie_details (_type_): _description_
     """
     start_time = time.time()
     postgres = context.resources.postgres
-    movie_data_combined = get_movie_details + updated_movie_details
+    movie_data_combined = get_new_movie_details + updated_movie_details
     
     unique_movie_dict = {}
     for movie in movie_data_combined:

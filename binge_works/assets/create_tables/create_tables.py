@@ -573,28 +573,39 @@ def create_fact_show_reviews(context: dg.AssetExecutionContext):
                     series_id INTEGER NOT NULL,
                     author_name VARCHAR(255),
                     author_username VARCHAR(255),
-                    date_id INTEGER NOT NULL, -- Consider if this should relate to partition_date or review_created_at
+                    date_id INTEGER, -- Allow NULL if review date is unknown
                     rating DECIMAL(3,1),
                     content_length INTEGER,
                     review_created_at TIMESTAMP,
                     review_updated_at TIMESTAMP,
-                    created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- When the record was inserted/updated in DB
-                    loaded_partition_date DATE, -- Add column to track partition date
+                    created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    loaded_partition_date DATE,
                     FOREIGN KEY (series_id) REFERENCES tmdb_data.dim_popular_shows(id)
                 );
-                -- Optional: Add an index on created_date for the lookback query
+                -- Add indexes
                 CREATE INDEX IF NOT EXISTS idx_fact_show_reviews_created_date ON tmdb_data.fact_show_reviews (created_date);
-                -- Optional: Add an index on series_id for the lookback query join
                 CREATE INDEX IF NOT EXISTS idx_fact_show_reviews_series_id ON tmdb_data.fact_show_reviews (series_id);
             """
             cursor.execute(create_table_query)
+            
             # Add the new column if it doesn't exist (idempotent addition)
             add_column_query = """
                 ALTER TABLE tmdb_data.fact_show_reviews
                 ADD COLUMN IF NOT EXISTS loaded_partition_date DATE;
             """
             cursor.execute(add_column_query)
-            conn.commit() # Make sure to commit schema changes
+            
+            # Ensure date_id allows NULLs
+            try:
+                alter_date_id_query = """
+                    ALTER TABLE tmdb_data.fact_show_reviews ALTER COLUMN date_id DROP NOT NULL;
+                """
+                cursor.execute(alter_date_id_query)
+            except Exception as alter_err:
+                context.log.warning(f"Could not ensure date_id allows NULLs (may already be set): {alter_err}")
+                conn.rollback()
+            else:
+                conn.commit()
 
     end_time = time.time()
     duration = end_time - start_time

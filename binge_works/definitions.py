@@ -18,6 +18,9 @@ from .assets import (
     dim_movie_genres,
     dim_tv_genres,
     movie_dim,
+    genres_dim,
+    cast_dim,
+    crew_dim,
     create_tables,
     #BRIDGES
     bridge_person_project,
@@ -29,8 +32,8 @@ from .assets import (
     fact_movie_reviews,
     fact_show_reviews,
     movie_performace_fact,
-    #AUGMENTATIONS
-    movie_aug,
+    #SNAPSHOTS
+    new_movies,
     
 )
 
@@ -56,6 +59,9 @@ from .constants import (
     DIM_MOVIE_GENRES,
     DIM_TV_GENRES,
     MOVIE_DIM,
+    GENRES_DIM,
+    CAST_DIM,
+    CREW_DIM,
     CREATE_TABLES,
     # Bridge Tables
     BRIDGE_PERSON_PROJECT,
@@ -68,7 +74,7 @@ from .constants import (
     FACT_SHOW_REVIEWS,
     MOVIE_PERFORMANCE_FACT,
     #Augmentations
-    MOVIE_AUG,
+    NEW_MOVIES,
 )
 
 # import jobs 
@@ -132,6 +138,9 @@ dim_movie_genres_assets = load_assets_from_package_module(dim_movie_genres, grou
 dim_tv_genres_assets = load_assets_from_package_module(dim_tv_genres, group_name=DIM_TV_GENRES)
 CREATE_TABLES_assets = load_assets_from_package_module(create_tables, group_name=CREATE_TABLES) 
 movie_dim_assets = load_assets_from_package_module(movie_dim, group_name=MOVIE_DIM)  
+genres_dim_assets = load_assets_from_package_module(genres_dim, group_name=GENRES_DIM)
+cast_dim_assets = load_assets_from_package_module(cast_dim, group_name=CAST_DIM)
+crew_dim_assets = load_assets_from_package_module(crew_dim, group_name=CREW_DIM)
 
 #bridge assets
 bridge_person_project_assets = load_assets_from_package_module(bridge_person_project, group_name=BRIDGE_PERSON_PROJECT)
@@ -146,8 +155,8 @@ fact_movie_reviews_assets = load_assets_from_package_module(fact_movie_reviews, 
 fact_show_reviews_assets = load_assets_from_package_module(fact_show_reviews, group_name=FACT_SHOW_REVIEWS)
 movie_performace_fact_assets = load_assets_from_package_module(movie_performace_fact, group_name=MOVIE_PERFORMANCE_FACT)
 
-#augmentation assets
-movie_aug_assets = load_assets_from_package_module(movie_aug, group_name=MOVIE_AUG)
+#snapshot assets
+new_movies_assets = load_assets_from_package_module(new_movies, group_name=NEW_MOVIES)
 
 
 #asset checks
@@ -168,7 +177,9 @@ asset_defs = [
     *dim_tv_genres_assets,
     *movie_dim_assets,
     *CREATE_TABLES_assets,
-    
+    *genres_dim_assets,
+    *cast_dim_assets,
+    *crew_dim_assets,
     #Bridge Tables
     *bridge_person_project_assets,
     *bridge_show_genre_assets,
@@ -181,9 +192,8 @@ asset_defs = [
     *fact_movie_reviews_assets,
     *fact_show_reviews_assets,
     *movie_performace_fact_assets,
-    
-    #Augmentation Tables
-    *movie_aug_assets,
+    #Snapshot Tables
+    *new_movies_assets,
 ]
 
 asset_check_defs = [

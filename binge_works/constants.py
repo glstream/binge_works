@@ -28,6 +28,9 @@ DIM_MOVIE_GENRES = "dim_movie_genres"
 DIM_TV_GENRES = "dim_tv_genres"
 CREATE_TABLES = "create_tables"
 MOVIE_DIM = "movie_dim"
+GENRES_DIM = "genres_dim"
+CAST_DIM = "cast_dim"
+CREW_DIM = "crew_dim"
 
 #Bridges
 BRIDGE_PERSON_PROJECT = "bridge_person_project"
@@ -42,8 +45,8 @@ MOVIE_PERFORMANCE_FACT = "movie_performance_fact"
 #Delta Pulls
 UPDATED_MOVIES   = "updated_movies"
 
-#augmentations
-MOVIE_AUG = "movie_aug"
+#snapshot
+NEW_MOVIES = "new_movies"
 
 # Load environment variables from the .env file
 load_dotenv(dotenv_path=".env")

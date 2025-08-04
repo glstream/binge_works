@@ -1,18 +1,18 @@
 import dagster as dg
 import time
 from datetime import datetime
-
+from typing import List, Set
 from ...constants import movie_aug_partitions_def
 
 
 @dg.asset(
-    name="get_movie_augmentation",
+    name="get_new_movies",
     required_resource_keys={"tmdb"},
     kinds={"python", "api", "task"},
     tags={'layer': 'staging'},
     partitions_def=movie_aug_partitions_def
 )
-def get_movie_augmentation(context: dg.AssetExecutionContext):
+def get_new_movies(context: dg.AssetExecutionContext):
     """
     Fetch movie augmentation data from TMDB API.
     
@@ -78,28 +78,28 @@ def get_movie_augmentation(context: dg.AssetExecutionContext):
         }
     )
 @dg.asset(
-    name="insert_movie_augmentation",
+    name="insert_new_movies",
     required_resource_keys={"postgres"},
     kinds={"python", "postgres", "task"},
-    deps=[dg.AssetKey("get_movie_augmentation")],
+    deps=[dg.AssetKey("get_new_movies")],
     tags={'layer': 'staging'},
     partitions_def=movie_aug_partitions_def
 )
-def insert_movie_augmentation(context: dg.AssetExecutionContext, get_movie_augmentation):
+def insert_new_movies(context: dg.AssetExecutionContext, get_new_movies):
     """
     Insert movie augmentation data into the database.
     
     Args:
         context: AssetExecutionContext
-        get_movie_augmentation: List of tuples containing movie data (movie_id, release_date, load_date)
+        get_new_movies: List of tuples containing movie data (movie_id, release_date, load_date)
     """
     start_time = time.time()
     postgres = context.resources.postgres
-    movies = get_movie_augmentation
+    movies = get_new_movies
     
-    # Example snippet for insert_movie_augmentation
+    # Example snippet for insert_new_movies
     cleaned_movies = []
-    for movie_tuple in get_movie_augmentation:
+    for movie_tuple in get_new_movies:
         # Assuming movie_tuple is (movie_id, release_date, partition_date, load_date)
         movie_id, release_date, partition_date, load_date = movie_tuple
         # Convert empty string or potentially invalid dates to None for release_date
@@ -142,21 +142,21 @@ def insert_movie_augmentation(context: dg.AssetExecutionContext, get_movie_augme
     )
     
 @dg.asset(
-    name="get_movie_ids_for_details",
+    name="get_new_movie_ids_for_details",
     required_resource_keys={"postgres"},
     kinds={"python", "postgres", "task"},
-    deps=[dg.AssetKey("insert_movie_augmentation")],
+    deps=[dg.AssetKey("insert_new_movies")],
     tags={'layer': 'staging'},
     partitions_def=movie_aug_partitions_def
 )
-def get_movie_ids_for_details(context: dg.AssetExecutionContext, insert_movie_augmentation):
+def get_new_movie_ids_for_details(context: dg.AssetExecutionContext, insert_new_movies):
     """
     Query the movie_aug table for the current partition and return movie IDs 
     that need detailed information fetched from the API.
     
     Args:
         context: AssetExecutionContext
-        insert_movie_augmentation: Number of movies inserted in previous step
+        insert_new_movies: Number of movies inserted in previous step
     """
     start_time = time.time()
     postgres = context.resources.postgres
@@ -164,7 +164,7 @@ def get_movie_ids_for_details(context: dg.AssetExecutionContext, insert_movie_au
     movie_ids = []
     
     # Skip the process if no movies were inserted
-    if insert_movie_augmentation == 0:
+    if insert_new_movies == 0:
         context.log.info(f"No movies were inserted for partition {partition_date_str}, skipping detail fetching")
         return dg.Output(
             value=[],
@@ -204,5 +204,116 @@ def get_movie_ids_for_details(context: dg.AssetExecutionContext, insert_movie_au
             "operation": "query",
             "movie_count": len(movie_ids),
             "partition": partition_date_str
+        }
+    )
+
+@dg.asset(
+    name="get_new_movie_details",
+    required_resource_keys={"tmdb"},
+    kinds={"python", "api", "task"},
+    deps=[dg.AssetKey("get_new_movie_ids_for_details")],    
+    tags={'layer': 'staging'},
+    partitions_def=movie_aug_partitions_def,
+)
+def get_new_movie_details(
+    context: dg.AssetExecutionContext, 
+    get_new_movie_ids_for_details: List[int]):
+    """
+    Fetch detailed movie details and store and prepare for loading into the movie_performance_fact table.
+
+    Args:
+        context (dg.AssetExecutionContext): _description_
+        get_new_movie_ids_for_details (_type_): _description_
+    """
+    movie_ids = get_new_movie_ids_for_details
+    if movie_ids is None:
+        context.log.warning("Input 'get_new_movie_ids_for_details' is None. Skipping processing.")
+        unique_movie_ids: Set[int] = set()
+        input_count = 0
+    elif not isinstance(movie_ids, (list, tuple, set)):
+        # Handle unexpected input types gracefully
+        context.log.error(f"Input 'get_new_movie_ids_for_details' is not a list/tuple/set (type: {type(movie_ids)}). Skipping processing.")
+        unique_movie_ids: Set[int] = set()
+        input_count = 0 # Or len(movie_ids_input) if trying to count elements anyway? Safer as 0.
+    else:
+        unique_movie_ids: Set[int] = set(movie_ids)
+        input_count = len(movie_ids)
+
+    context.log.info(f"Received {input_count} movie IDs, processing {len(unique_movie_ids)} unique IDs.")
+    context.log.info(f"Movie IDs: {movie_ids}")
+    start_time = time.time()
+    tmdb = context.resources.tmdb
+    
+    movie_data = []    
+    
+    for movie_id in unique_movie_ids:
+        try:
+            # Fetch movie details
+            movie_details = tmdb.get_movie_details(movie_id, append_to_response="credits,production_companies")
+            
+            if not movie_details or not movie_details.get("id"):
+                context.log.warning(f"Skipping Movie ID {movie_id}: Invalid or empty response from API.")
+                continue
+
+            # context.log.info(f"Movie Details: {json.dumps(movie_details, indent=2)}")
+            budget = movie_details.get("budget", 0)
+            profit = movie_details.get("revenue", 0) - budget
+            roi = (profit / budget) * 100 if budget > 0 else 0
+            is_profitable = profit > 0
+            
+            genre_list = movie_details.get("genres", [])
+            cast_list = movie_details.get("credits", {}).get("cast", [])
+            crew_list = movie_details.get("credits", {}).get("crew", [])
+
+            
+            # Prepare data for loading
+            movie_data.append({
+                "movie_id": movie_details.get("id"),
+                "relese_date:": movie_details.get("release_date"),
+                "title": movie_details.get("title"),
+                "original_title": movie_details.get("original_title"),
+                "original_language": movie_details.get("original_language"),
+                "overview": movie_details.get("overview"),
+                "tagline": movie_details.get("tagline"),
+                "status": movie_details.get("status"),
+                "runtime": movie_details.get("runtime"),
+                "is_adult": movie_details.get("adult", False),
+                "is_video": movie_details.get("video", False),
+                "poster_path": movie_details.get("poster_path"),
+                "backdrop_path": movie_details.get("backdrop_path"),
+                "homepage": movie_details.get("homepage"),
+                "imdb_id": movie_details.get("imdb_id"),
+                "tmdb_popularity": movie_details.get("popularity"),
+                "vote_count": movie_details.get("vote_count"),
+                "vote_average": movie_details.get("vote_average"),
+                "revenue": movie_details.get("revenue"),
+                "profit": profit,
+                "budget": budget,
+                "roi": roi,
+                "is_profitable": is_profitable,
+                "genres": genre_list,
+                "cast": cast_list, 
+                "crew": crew_list,
+                "domestic_revenue": movie_details.get("domestic_revenue"),
+                "international_revenue": movie_details.get("international_revenue"),
+                "opening_weekend_revenue": movie_details.get("opening_weekend_revenue"),
+                "box_office_rank": movie_details.get("box_office_rank") 
+            })
+            
+            # context.log.info(f"Prepared data for Movie ID {movie_id}: {movie_details}")
+            
+        except Exception as e:
+            context.log.error(f"Error fetching details for Movie ID {movie_id}: {e}")
+            
+    end_time = time.time()
+    duration = end_time - start_time    
+    
+    return dg.Output(
+        value=movie_data,
+        metadata={
+            "execution_time": duration,
+            "movies_prepared": len(movie_ids),
+            "api": "movie/movie_id",
+            "operation": "request"
         }
     )
