@@ -193,23 +193,26 @@ def raw_player_asset_values_hist(context: dg.OpExecutionContext) -> dg.Output[pd
     and player_position = 'PICK'
     ),
 
-    fc_picks as (SELECT 
-    CASE WHEN player_full_name NOT LIKE '%Pick%' THEN 
-        (player_first_name || ' Mid ' || player_last_name || 
-        CASE
-            WHEN player_last_name::INTEGER % 10 = 1 THEN 'st'
-            WHEN player_last_name::INTEGER % 10 = 2 THEN 'nd'
-            WHEN player_last_name::INTEGER % 10 = 3 THEN 'rd'
-            ELSE 'th'
-        END) ELSE player_full_name END as player_full_name
-            ,sf_value
-    ,one_qb_value		  
-    FROM dynastr.fc_player_ranks
-    WHERE 1 = 1
-    AND player_position = 'PICK'
-    AND rank_type = 'dynasty'
+    fc_picks as (
+        SELECT 
+            CASE 
+                WHEN lower(player_full_name) NOT LIKE '%pick%' THEN 
+                    player_first_name || ' Mid ' || player_last_name || 
+                    CASE
+                        WHEN RIGHT(regexp_replace(player_last_name, '\D', '', 'g'), 1) = '1' THEN 'st'
+                        WHEN RIGHT(regexp_replace(player_last_name, '\D', '', 'g'), 1) = '2' THEN 'nd'
+                        WHEN RIGHT(regexp_replace(player_last_name, '\D', '', 'g'), 1) = '3' THEN 'rd'
+                        ELSE 'th'
+                    END
+                ELSE player_full_name 
+            END as player_full_name,
+            sf_value,
+            one_qb_value		  
+        FROM dynastr.fc_player_ranks
+        WHERE 1 = 1
+        AND player_position = 'PICK'
+        AND rank_type = 'dynasty'
     ),
-
     dd_picks as ( 
         SELECT 
 SUBSTRING(name_id FROM 1 FOR 4) || ' ' || INITCAP(SUBSTRING(name_id FROM 5 FOR LENGTH(name_id) - 9)) || ' ' || SUBSTRING(name_id FROM LENGTH(name_id) - 4 FOR 3) AS player_full_name
