@@ -31,7 +31,7 @@ def extract_one_qb_ktc_rookie_picks(context):
     
     for i in range(1,5):
         round = str(i)
-        url = f"https://keeptradecut.com/trade-calculator?var=5&pickVal=0&teamOne=2027{round}1|2027{round}2|2027{round}3|2027{round}4|2027{round}5|2027{round}6|2027{round}7|2027{round}8|2027{round}9|2027{round}10|2027{round}11|2027{round}12&teamTwo=&format=1&isStartup=0"
+        url = f"https://keeptradecut.com/trade-calculator?var=5&pickVal=0&teamOne=2026{round}1|2026{round}2|2026{round}3|2026{round}4|2026{round}5|2026{round}6|2026{round}7|2026{round}8|2026{round}9|2026{round}10|2026{round}11|2026{round}12&teamTwo=&format=1&isStartup=0"
         
         headOption = webdriver.FirefoxOptions()
         headOption.add_argument("--headless")
@@ -52,7 +52,7 @@ def extract_one_qb_ktc_rookie_picks(context):
             dpos = draft_position.split(' ')
             draf_pos = f"{dpos[0]} Round {dpos[-1][0]} Pick {str(int(dpos[-1].split('.')[-1]))}"
             draft_pos_value = k.find('div', class_='player-value').find('p').get_text()
-            ktc_player_id = draft_position.split(' ')[-1].replace('.', '') + '0002027'
+            ktc_player_id = draft_position.split(' ')[-1].replace('.', '') + '0002026'
             enrty_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f%z")
             one_qb_picks_list.append([draf_pos, ktc_player_id, draft_pos_value, rank_type, enrty_time])
         
@@ -136,7 +136,7 @@ def extract_sf_ktc_rookie_picks(context):
     
     for i in range(1,5):
         round = str(i)
-        url = f"https://keeptradecut.com/trade-calculator?var=5&pickVal=0&teamOne=2027{round}1|2027{round}2|2027{round}3|2027{round}4|2027{round}5|2027{round}6|2027{round}7|2027{round}8|2027{round}9|2027{round}10|2027{round}11|2027{round}12&teamTwo=&format=2&isStartup=0"
+        url = f"https://keeptradecut.com/trade-calculator?var=5&pickVal=0&teamOne=2026{round}1|2026{round}2|2026{round}3|2026{round}4|2026{round}5|2026{round}6|2026{round}7|2026{round}8|2026{round}9|2026{round}10|2026{round}11|2026{round}12&teamTwo=&format=2&isStartup=0"
         
         headOption = webdriver.FirefoxOptions()
         headOption.add_argument("--headless")
@@ -156,7 +156,7 @@ def extract_sf_ktc_rookie_picks(context):
             dpos = draft_position.split(' ')
             draf_pos = f"{dpos[0]} Round {dpos[-1][0]} Pick {str(int(dpos[-1].split('.')[-1]))}"
             draft_pos_value = k.find('div', class_='player-value').find('p').get_text()
-            ktc_player_id = draft_position.split(' ')[-1].replace('.', '') + '0002027'
+            ktc_player_id = draft_position.split(' ')[-1].replace('.', '') + '0002026'
             enrty_time = datetime.now().strftime("%Y-%m-%dT%H:%M:%S.%f%z")
             sf_picks_list.append([draf_pos, ktc_player_id, draft_pos_value, rank_type, enrty_time])
         browser.quit()

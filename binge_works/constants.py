@@ -75,7 +75,7 @@ encoded_password = urllib.parse.quote_plus(db_password)
 postgres_connection_string = f"postgresql://{db_user}:{encoded_password}@{db_host}:{db_port}/{db_name}?sslmode={sslmode}"
 
 daily_partitions_def = DailyPartitionsDefinition(
-    start_date="2025-03-26"
+    start_date="2026-03-26"
 )
 
 movie_aug_partitions_def = DailyPartitionsDefinition(

@@ -35,7 +35,7 @@ def raw_player_asset_values(context: dg.OpExecutionContext) -> dg.Output[pd.Data
     select *
     from dynastr.ktc_player_ranks ktc 
     where 1=1
-    and (ktc.player_full_name like '%2025 Round%' or ktc.position = 'RDP') 
+    and (ktc.player_full_name like '%2026 Round%' or ktc.position = 'RDP') 
     ),
     dp_picks as (
         select 
@@ -124,7 +124,7 @@ AND rank_type = 'dynasty'
     left join dp_picks dp on lower(ktc.player_full_name) = lower(dp.player_full_name)
     left join dd_picks dd on lower(ktc.player_full_name) = lower(dd.player_full_name)
     where 1=1
-    and (ktc.player_full_name like '%2025 Round%' or ktc.position = 'RDP')
+    and (ktc.player_full_name like '%2026 Round%' or ktc.position = 'RDP')
         )
 
     select 
@@ -452,7 +452,7 @@ def load_processed_player_ranks(context: dg.OpExecutionContext, processed_player
 
 @dg.asset(
     name="load_future_draft_picks",
-    description="Calculates 2026 and 2027 draft pick values based on 2025, and loads them.",
+    description="Calculates 2027 and 2028 draft pick values based on 2026, and loads them.",
     compute_kind="postgres",
     deps=[dg.AssetKey("load_processed_player_ranks")],
     required_resource_keys={"postgres"},
@@ -461,7 +461,7 @@ def load_processed_player_ranks(context: dg.OpExecutionContext, processed_player
 )
 def load_future_draft_picks(context: dg.OpExecutionContext) -> dg.Output:
     """
-    Fetches 2025 pick values, calculates future year values (2026, 2027)
+    Fetches 2026 pick values, calculates future year values (2027, 2028)
     with discounts, deletes existing future picks, and inserts new ones.
     Depends on the successful load of the main player rank data.
     """
@@ -469,14 +469,14 @@ def load_future_draft_picks(context: dg.OpExecutionContext) -> dg.Output:
     postgres = context.resources.postgres
     inserted_count = 0
     deleted_count = 0
-    fetch_count_2025 = 0
+    fetch_count_2026 = 0
 
 
-    sql_query_to_fetch_2025_data = """
+    sql_query_to_fetch_2026_data = """
     SELECT player_full_name, ktc_player_id, team, _position, rank_type,
         superflex_one_qb_value, superflex_sf_value
     FROM dynastr.sf_player_ranks
-    WHERE player_full_name LIKE '%2025%'
+    WHERE player_full_name LIKE '%2026%'
         AND (player_full_name LIKE '% Mid %' OR player_full_name LIKE '% Late %' OR player_full_name LIKE '% Early %') -- Adjusted LIKE patterns for safety
         AND rank_type = 'dynasty'
     ORDER BY superflex_sf_value DESC;
@@ -484,7 +484,7 @@ def load_future_draft_picks(context: dg.OpExecutionContext) -> dg.Output:
 
     delete_sql = """
     DELETE FROM dynastr.sf_player_ranks
-    WHERE (player_full_name LIKE '%2026%' OR player_full_name LIKE '%2027%') -- Delete both years
+    WHERE (player_full_name LIKE '%2027%' OR player_full_name LIKE '%2028%') -- Delete both years
         AND (player_full_name LIKE '% Mid %' OR player_full_name LIKE '% Late %' OR player_full_name LIKE '% Early %')
         AND rank_type = 'dynasty';
     """
@@ -502,22 +502,22 @@ def load_future_draft_picks(context: dg.OpExecutionContext) -> dg.Output:
     try:
         with postgres.get_connection() as conn:
             with conn.cursor() as cursor:
-                # 1. Fetch 2025 data
-                context.log.info("Fetching 2025 pick data...")
-                cursor.execute(sql_query_to_fetch_2025_data)
-                fetched_data_2025 = cursor.fetchall()
-                fetch_count_2025 = len(fetched_data_2025)
-                context.log.info(f"Fetched {fetch_count_2025} rows for 2025 picks.")
+                # 1. Fetch 2026 data
+                context.log.info("Fetching 2026 pick data...")
+                cursor.execute(sql_query_to_fetch_2026_data)
+                fetched_data_2026 = cursor.fetchall()
+                fetch_count_2026 = len(fetched_data_2026)
+                context.log.info(f"Fetched {fetch_count_2026} rows for 2026 picks.")
 
-                if not fetched_data_2025:
-                    context.log.warning("No 2025 pick data found to calculate future picks.")
+                if not fetched_data_2026:
+                    context.log.warning("No 2026 pick data found to calculate future picks.")
                     # Still proceed to delete any old future picks
                 else:
-                    # 2. Calculate 2026 and 2027 data
-                    data_2026 = [
+                    # 2. Calculate 2027 and 2028 data
+                    data_2027 = [
                         (
-                            pick['player_full_name'].replace('2025', '2026'), # player_full_name
-                            pick['player_full_name'].replace('2025', '2026'), # display_player_full_name
+                            pick['player_full_name'].replace('2026', '2027'), # player_full_name
+                            pick['player_full_name'].replace('2026', '2027'), # display_player_full_name
                             str(uuid.uuid4()),                               # ktc_player_id (new UUID)
                             pick['team'],                                    # team
                             pick['_position'],                               # _position
@@ -525,12 +525,12 @@ def load_future_draft_picks(context: dg.OpExecutionContext) -> dg.Output:
                             round(pick['superflex_one_qb_value'] * 0.90),    # superflex_one_qb_value (discounted)
                             round(pick['superflex_sf_value'] * 0.90),        # superflex_sf_value (discounted)
                             enrty_time                                       # insert_date
-                        ) for pick in fetched_data_2025
+                        ) for pick in fetched_data_2026
                     ]
-                    data_2027 = [
+                    data_2028 = [
                         (
-                            pick['player_full_name'].replace('2025', '2027'), # player_full_name
-                            pick['player_full_name'].replace('2025', '2027'), # display_player_full_name
+                            pick['player_full_name'].replace('2026', '2028'), # player_full_name
+                            pick['player_full_name'].replace('2026', '2028'), # display_player_full_name
                             str(uuid.uuid4()),                               # ktc_player_id (new UUID)
                             pick['team'],                                    # team
                             pick['_position'],                               # _position
@@ -538,28 +538,28 @@ def load_future_draft_picks(context: dg.OpExecutionContext) -> dg.Output:
                             round(pick['superflex_one_qb_value'] * 0.80),    # superflex_one_qb_value (discounted more)
                             round(pick['superflex_sf_value'] * 0.80),        # superflex_sf_value (discounted more)
                             enrty_time                                       # insert_date
-                        ) for pick in fetched_data_2025
+                        ) for pick in fetched_data_2026
                     ]
-                    context.log.info(f"Calculated {len(data_2026)} picks for 2026 and {len(data_2027)} picks for 2027.")
+                    context.log.info(f"Calculated {len(data_2027)} picks for 2027 and {len(data_2028)} picks for 2028.")
 
 
-                # 3. Delete existing 2026/2027 pick data
-                context.log.info("Deleting existing 2026/2027 pick data...")
+                # 3. Delete existing 2027/2028 pick data
+                context.log.info("Deleting existing 2027/2028 pick data...")
                 cursor.execute(delete_sql)
                 deleted_count = cursor.rowcount
                 context.log.info(f"Deleted {deleted_count} rows.")
 
-                # 4. Insert new 2026 and 2027 data if calculated
-                if fetched_data_2025: # Only insert if we had source data
-                    context.log.info("Inserting new 2026 pick data...")
-                    postgres.execute_batch(cursor, insert_future_draft_sql, data_2026, page_size=100)
-                    inserted_count += len(data_2026) # Assuming execute_batch doesn't reliably give inserted count here
-                    context.log.info(f"Inserted {len(data_2026)} rows for 2026.")
-
+                # 4. Insert new 2027 and 2028 data if calculated
+                if fetched_data_2026: # Only insert if we had source data
                     context.log.info("Inserting new 2027 pick data...")
                     postgres.execute_batch(cursor, insert_future_draft_sql, data_2027, page_size=100)
                     inserted_count += len(data_2027)
                     context.log.info(f"Inserted {len(data_2027)} rows for 2027.")
+
+                    context.log.info("Inserting new 2028 pick data...")
+                    postgres.execute_batch(cursor, insert_future_draft_sql, data_2028, page_size=100)
+                    inserted_count += len(data_2028)
+                    context.log.info(f"Inserted {len(data_2028)} rows for 2028.")
 
             # 5. Commit transaction
             conn.commit()
@@ -579,13 +579,13 @@ def load_future_draft_picks(context: dg.OpExecutionContext) -> dg.Output:
         value={
             "records_deleted": deleted_count,
             "records_inserted": inserted_count,
-            "source_2025_records": fetch_count_2025
+            "source_2026_records": fetch_count_2026
         },
         metadata={
             "execution_time_seconds": dg.MetadataValue.float(duration),
             "records_deleted": dg.MetadataValue.int(deleted_count),
             "records_inserted": dg.MetadataValue.int(inserted_count),
-            "source_2025_records": dg.MetadataValue.int(fetch_count_2025),
+            "source_2026_records": dg.MetadataValue.int(fetch_count_2026),
             "target_table": "dynastr.sf_player_ranks",
         },
     )

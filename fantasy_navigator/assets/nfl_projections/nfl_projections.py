@@ -15,7 +15,7 @@ SCHEMA_NAME = "dynastr" # Assuming schema exists
 
 # Determine Season Year Dynamically - Use context time if available, otherwise current time
 # Context date is May 4, 2025, so use 2025
-DEFAULT_SEASON_YEAR = "2025"
+DEFAULT_SEASON_YEAR = "2026"
 NFL_URL_TEMPLATE = "https://fantasy.nfl.com/research/projections?offset={offset}&position=O&sort=projectedPts&statCategory=projectedStats&statSeason={year}&statType=seasonProjectedStats"
 # Pagination range from Airflow task
 NFL_PAGINATION_START = 1
