@@ -177,13 +177,13 @@ def raw_player_asset_values_hist(context: dg.OpExecutionContext) -> dg.Output[pd
     select *
     from dynastr.ktc_player_ranks ktc 
     where 1=1
-    and (ktc.player_full_name like '%2025 Round%' or ktc.position = 'RDP') 
+    and (ktc.player_full_name like '%2027 Round%' or ktc.position = 'RDP') 
     ),
     dp_picks as (
         select 
             CASE 
-                WHEN (player_full_name like '%Mid%' or player_first_name = '2026') 
-                THEN (CASE WHEN player_first_name = '2026' 
+                WHEN (player_full_name like '%Mid%' or player_first_name = '2027') 
+                THEN (CASE WHEN player_first_name = '2027' 
                         THEN CONCAT(player_first_name, ' Mid ', player_last_name) else player_full_name end)
             ELSE player_full_name END as player_full_name
         ,sf_value
@@ -265,7 +265,7 @@ AND rank_type = 'dynasty'
     left join dp_picks dp on lower(ktc.player_full_name) = lower(dp.player_full_name)
     left join dd_picks dd on lower(ktc.player_full_name) = lower(dd.player_full_name)
     where 1=1
-    and (ktc.player_full_name like '%2025 Round%' or ktc.position = 'RDP')
+    and (ktc.player_full_name like '%2027 Round%' or ktc.position = 'RDP')
         )
 
     select 
