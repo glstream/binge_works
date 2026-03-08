@@ -90,6 +90,7 @@ AND rank_type = 'dynasty'
     select p.full_name as player_full_name
     ,ktc.ktc_player_id as player_id
     , case when ktc.team = 'KCC' then 'KC' else ktc.team end as team
+    , CASE WHEN round(CAST(ktc.age AS float)) < 1 THEN NULL ELSE round(CAST(ktc.age AS float))::int END as age
     ,ktc.sf_value as ktc_sf_value
     ,ktc.one_qb_value as ktc_one_qb_value
     ,fc.sf_value as fc_sf_value
@@ -101,7 +102,7 @@ AND rank_type = 'dynasty'
     , p.player_position as _position
 
     from dynastr.players p
-    inner join (select player_first_name, player_last_name, team, ktc_player_id, sf_value, one_qb_value from dynastr.ktc_player_ranks where rank_type = 'dynasty') ktc on lower(concat(p.first_name, p.last_name)) = lower(concat(ktc.player_first_name, ktc.player_last_name))
+    inner join (select player_first_name, player_last_name, team, age, ktc_player_id, sf_value, one_qb_value from dynastr.ktc_player_ranks where rank_type = 'dynasty') ktc on lower(concat(p.first_name, p.last_name)) = lower(concat(ktc.player_first_name, ktc.player_last_name))
     inner join (select sleeper_player_id, sf_value, one_qb_value from dynastr.fc_player_ranks where rank_type = 'dynasty') fc on fc.sleeper_player_id = p.player_id 
     inner join dynastr.dp_player_ranks dp on lower(concat(p.first_name, p.last_name)) = lower(concat(dp.player_first_name, dp.player_last_name))
     inner join (select name_id, sf_trade_value, trade_value from dynastr.dd_player_ranks where rank_type = 'dynasty') dd on lower(concat(p.first_name,p.last_name, p.player_position)) = dd.name_id
@@ -111,6 +112,7 @@ AND rank_type = 'dynasty'
     select ktc.player_full_name as player_full_name
     ,ktc.ktc_player_id as player_id
     , null as team
+    , null as age
     ,ktc.sf_value as ktc_sf_value
     ,ktc.one_qb_value as ktc_one_qb_value
     ,coalesce(fc.sf_value, ktc.sf_value) as fc_sf_value
@@ -130,11 +132,12 @@ AND rank_type = 'dynasty'
     and (ktc.player_full_name like '%2025 Round%' or ktc.position = 'RDP')
         )
 
-    select 
+    select
     player_full_name
     , player_full_name as display_player_full_name
     , player_id
     , team
+    , age
     , _position
     , ktc_sf_value
     , ROW_NUMBER() over (order by ktc_sf_value desc) as ktc_sf_rank
@@ -286,7 +289,7 @@ def processed_player_ranks(context: dg.OpExecutionContext, raw_player_asset_valu
     # Now includes the renamed ktc_player_id and the calculated average columns
     final_cols = [
         'player_full_name', 'display_player_full_name', 'ktc_player_id', # Corrected name
-        'team', '_position',
+        'team', 'age', '_position',
         'ktc_sf_value', 'ktc_sf_rank', 'ktc_one_qb_value', 'ktc_one_qb_rank',
         'fc_sf_value', 'fc_sf_rank', 'fc_one_qb_value', 'fc_one_qb_rank',
         'dp_sf_value', 'dp_sf_rank', 'dp_one_qb_value', 'dp_one_qb_rank',
@@ -355,7 +358,7 @@ def load_processed_player_ranks(context: dg.OpExecutionContext, processed_player
     # Column names match the DataFrame columns selected in the previous asset
     insert_query = """
     INSERT INTO dynastr.sf_player_ranks (
-        player_full_name, display_player_full_name, ktc_player_id, team, _position, ktc_sf_value,
+        player_full_name, display_player_full_name, ktc_player_id, team, age, _position, ktc_sf_value,
         ktc_sf_rank, ktc_one_qb_value, ktc_one_qb_rank, fc_sf_value,
         fc_sf_rank, fc_one_qb_value, fc_one_qb_rank, dp_sf_value,
         dp_sf_rank, dp_one_qb_value, dp_one_qb_rank,
@@ -371,12 +374,13 @@ def load_processed_player_ranks(context: dg.OpExecutionContext, processed_player
     ) VALUES (
         %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
         %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
-        %s, %s, %s, %s, %s
+        %s, %s, %s, %s, %s, %s
     )
     ON CONFLICT (ktc_player_id, rank_type) DO UPDATE SET
         player_full_name = EXCLUDED.player_full_name,
         display_player_full_name = EXCLUDED.display_player_full_name,
         team = EXCLUDED.team,
+        age = EXCLUDED.age,
         _position = EXCLUDED._position,
         ktc_sf_value = EXCLUDED.ktc_sf_value,
         ktc_sf_rank = EXCLUDED.ktc_sf_rank,
