@@ -12,6 +12,8 @@ SCHEMA_NAME = "dynastr" # Assuming schema exists
 CBS_POSITIONS = ['QB', 'RB', 'WR', 'TE']
 CBS_SCORING = 'ppr'
 
+_OWNERS = ["grayson.stream@gmail.com"]
+
 current_year = datetime.now().year # Fallback if context time isn't available
 PROJECTION_YEAR = current_year # Adjust logic if needed (e.g., based on month)
 CBS_BASE_URL_TEMPLATE = "https://www.cbssports.com/fantasy/football/stats/{position}/{year}/season/projections/{scoring}/"
@@ -22,8 +24,9 @@ CBS_BASE_URL_TEMPLATE = "https://www.cbssports.com/fantasy/football/stats/{posit
 @dg.asset(
     name="cbs_raw_projections_data",
     description=f"Scrapes {PROJECTION_YEAR} player projections from CBS Sports for {CBS_SCORING} scoring.",
-    compute_kind="python", 
-    metadata={"source": "cbssports.com"}
+    compute_kind="python",
+    metadata={"source": "cbssports.com"},
+    owners=_OWNERS,
 )
 def cbs_raw_projections_data(context: dg.AssetExecutionContext) -> List[Tuple[str, str, str, Optional[float], str]]:
     """
@@ -117,7 +120,8 @@ def cbs_raw_projections_data(context: dg.AssetExecutionContext) -> List[Tuple[st
     description=f"Loads the scraped CBS player projections into the {TARGET_TABLE} table.",
     compute_kind="postgres",
     required_resource_keys={POSTGRES_RESOURCE_KEY},
-    metadata={"target_table": TARGET_TABLE}
+    metadata={"target_table": TARGET_TABLE},
+    owners=_OWNERS,
 )
 def cbs_player_projections_loaded(context: dg.AssetExecutionContext, cbs_raw_projections_data: List[Tuple[str, str, str, Optional[float], str]]) -> dg.Output:
     """
@@ -211,7 +215,8 @@ def cbs_player_projections_loaded(context: dg.AssetExecutionContext, cbs_raw_pro
     required_resource_keys={POSTGRES_RESOURCE_KEY},
     # Depends on the load step finishing
     deps=[cbs_player_projections_loaded],
-    metadata={"target_table": TARGET_TABLE}
+    metadata={"target_table": TARGET_TABLE},
+    owners=_OWNERS,
 )
 def cbs_player_projections_formatted(context: dg.AssetExecutionContext) -> dg.Output:
     """

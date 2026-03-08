@@ -5,12 +5,15 @@ from datetime import datetime
 import uuid
 import time
 
-
+TARGET_TABLE = "dynastr.sf_player_ranks_hist"
+_OWNERS = ["grayson.stream@gmail.com"]
 
 @dg.asset(name="create_sf_ranks_history",
         description="Creates the sf_ranks_history table if it doesn't exist.",
-        required_resource_keys={"postgres"}
-        )
+        required_resource_keys={"postgres"},
+        compute_kind="postgres",
+        owners=_OWNERS,
+            )
 def create_sf_ranks_history(context):
     postgres = context.resources.postgres
     with postgres.get_connection() as conn:
@@ -76,8 +79,10 @@ def create_sf_ranks_history(context):
 
 @dg.asset(name="truncate_sf_player_ranks_staging",
         required_resource_keys={"postgres"},
-        kinds={"sql", "postgres", "bronze"},
-        tags={"layer": "bronze"},)
+        compute_kind="postgres",
+        op_tags={"layer": "bronze"},
+        owners=_OWNERS,
+            )
 def truncate_sf_player_ranks_staging(context):
     """Asset to truncate the sf_player_ranks table"""
     start_time = time.time()
@@ -155,15 +160,16 @@ def truncate_sf_player_ranks_staging(context):
     description="Fetches combined player and draft pick data from various source tables.",
     compute_kind="postgres",
     required_resource_keys={"postgres"},
-    tags={"layer": "staging", "source": "postgres"},
+    op_tags={"layer": "staging", "source": "postgres"},
     deps=[
-        dg.AssetKey("load_sf_ktc_rookie_picks"), 
+        dg.AssetKey("load_sf_ktc_rookie_picks"),
         dg.AssetKey("load_one_qb_ktc_rookie_picks"),
-        dg.AssetKey("ktc_player_ranks_formatted"),  
+        dg.AssetKey("ktc_player_ranks_formatted"),
         dg.AssetKey("fc_player_ranks_formatted"),
         dg.AssetKey("dp_player_ranks_formatted"),
         dg.AssetKey("dd_player_ranks_formatted"),
         ],
+    owners=_OWNERS,
 )
 def raw_player_asset_values_hist(context: dg.OpExecutionContext) -> dg.Output[pd.DataFrame]:
     """
@@ -332,7 +338,8 @@ AND rank_type = 'dynasty'
     name="processed_player_ranks_hist",
     description="Normalizes player values, calculates harmonic means, and ranks players.",
     compute_kind="pandas",
-    tags={"layer": "processing"},
+    op_tags={"layer": "processing"},
+    owners=_OWNERS,
 )
 def processed_player_ranks_hist(context: dg.OpExecutionContext, raw_player_asset_values_hist: pd.DataFrame) -> dg.Output[pd.DataFrame]:
     """
@@ -473,7 +480,8 @@ def processed_player_ranks_hist(context: dg.OpExecutionContext, raw_player_asset
         compute_kind="postgres",
         required_resource_keys={"postgres"},
         deps=[dg.AssetKey("truncate_sf_player_ranks_staging"), dg.AssetKey("processed_player_ranks_hist")],
-        tags={"layer": "staging", "sink": "postgres"},
+        op_tags={"layer": "staging", "sink": "postgres"},
+        owners=_OWNERS,
 )
 def load_sf_player_ranks_staging(context: dg.OpExecutionContext, processed_player_ranks_hist: pd.DataFrame) -> dg.Output:
     """
@@ -590,8 +598,9 @@ def load_sf_player_ranks_staging(context: dg.OpExecutionContext, processed_playe
     description="Loads the processed player/pick data into the sf_player_ranks table.",
     compute_kind="postgres",
     required_resource_keys={"postgres"},
-    tags={"layer": "gold", "sink": "postgres"},
+    op_tags={"layer": "gold", "sink": "postgres"},
     deps=[dg.AssetKey("load_sf_player_ranks_staging")],
+    owners=_OWNERS,
 )
 def load_sf_player_ranks_hist(context: dg.OpExecutionContext) -> dg.Output:
 
@@ -710,7 +719,7 @@ def load_sf_player_ranks_hist(context: dg.OpExecutionContext) -> dg.Output:
 
     end_time = time.time()
     duration = end_time - start_time
-    
+
     return dg.Output(
         value=True,
         metadata={

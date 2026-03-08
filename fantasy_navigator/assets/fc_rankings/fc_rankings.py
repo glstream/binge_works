@@ -7,6 +7,7 @@ import json
 POSTGRES_RESOURCE_KEY = "postgres" # Matching your example asset
 TARGET_TABLE = "dynastr.fc_player_ranks"
 SCHEMA_NAME = "dynastr" # Assuming schema exists
+_OWNERS = ["grayson.stream@gmail.com"]
 
 FC_SF_API_URLS = {
     "dynasty": "https://api.fantasycalc.com/values/current?isDynasty=true&numQbs=2&_source=dynastysuperflex",
@@ -33,9 +34,9 @@ def parse_player_name(name_str: str) -> tuple[str, str]:
     return first_name, last_name
 
 # --- Assets ---
-
 @dg.asset(
     name="fc_sf_raw_player_data",
+    owners=_OWNERS,
     description="Fetches Superflex player data (dynasty and redraft) from FantasyCalc API.",
     compute_kind="python",
     metadata={"source": "fantasycalc.com"}
@@ -109,6 +110,7 @@ def fc_sf_raw_player_data(context: dg.AssetExecutionContext) ->  dg.Output:
     name="fc_player_ranks_sf_loaded",
     description=f"Loads the scraped FantasyCalc SF player data into the {TARGET_TABLE} table.",
     compute_kind="postgres",
+    owners=_OWNERS,
     required_resource_keys={POSTGRES_RESOURCE_KEY},
     metadata={"target_table": TARGET_TABLE, "load_type": "superflex"}
 )
@@ -202,8 +204,8 @@ def fc_player_ranks_sf_loaded(context: dg.AssetExecutionContext, fc_sf_raw_playe
     name="fc_one_qb_raw_player_data",
     description="Fetches 1-QB player data (dynasty and redraft) from FantasyCalc API.",
     compute_kind="python",
+    owners=_OWNERS,
     metadata={"source": "fantasycalc.com"},
-    # IMPORTANT: Ensure SF data is loaded before fetching 1-QB data
     deps=[fc_player_ranks_sf_loaded]
 )
 def fc_one_qb_raw_player_data(context: dg.AssetExecutionContext) -> list[list]:
@@ -263,9 +265,9 @@ def fc_one_qb_raw_player_data(context: dg.AssetExecutionContext) -> list[list]:
     name="fc_player_ranks_one_qb_loaded",
     description=f"Loads the scraped FantasyCalc 1-QB player data into the {TARGET_TABLE} table.",
     compute_kind="postgres",
+    owners=_OWNERS,
     required_resource_keys={POSTGRES_RESOURCE_KEY},
     metadata={"target_table": TARGET_TABLE, "load_type": "one_qb"}
-    # Dependency inferred from input argument fc_one_qb_raw_player_data
 )
 def fc_player_ranks_one_qb_loaded(context: dg.AssetExecutionContext, fc_one_qb_raw_player_data: list[list]) -> dg.Output:
     """
@@ -353,8 +355,8 @@ def fc_player_ranks_one_qb_loaded(context: dg.AssetExecutionContext, fc_one_qb_r
     name="fc_player_ranks_formatted",
     description=f"Formats the player_first_name column in the {TARGET_TABLE} table.",
     compute_kind="postgres",
+    owners=_OWNERS,
     required_resource_keys={POSTGRES_RESOURCE_KEY},
-    # IMPORTANT: Depends on the 1-QB load being finished
     deps=[fc_player_ranks_one_qb_loaded],
     metadata={"target_table": TARGET_TABLE}
 )

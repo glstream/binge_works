@@ -13,6 +13,8 @@ POSTGRES_RESOURCE_KEY = "postgres" # Matching your setup
 TARGET_TABLE = "dynastr.nfl_player_projections"
 SCHEMA_NAME = "dynastr" # Assuming schema exists
 
+_OWNERS = ["grayson.stream@gmail.com"]
+
 # Determine Season Year Dynamically - Use context time if available, otherwise current time
 # Context date is May 4, 2025, so use 2025
 DEFAULT_SEASON_YEAR = "2025"
@@ -29,7 +31,8 @@ NFL_PAGINATION_STEP = 25
     description=f"Scrapes paginated {DEFAULT_SEASON_YEAR} player projections from NFL.com.",
     compute_kind="python",
     group_name="nfl_projections", # Added group_name
-    metadata={"source": "fantasy.nfl.com"}
+    metadata={"source": "fantasy.nfl.com"},
+    owners=_OWNERS,
 )
 def nfl_raw_projections_data(context: dg.AssetExecutionContext) -> List[Tuple[str, str, str, str, str, Optional[int], str]]:
     """
@@ -180,7 +183,8 @@ def nfl_raw_projections_data(context: dg.AssetExecutionContext) -> List[Tuple[st
     compute_kind="postgres",
     group_name="nfl_projections",
     required_resource_keys={POSTGRES_RESOURCE_KEY},
-    metadata={"target_table": TARGET_TABLE}
+    metadata={"target_table": TARGET_TABLE},
+    owners=_OWNERS,
 )
 def nfl_player_projections_loaded(context: dg.AssetExecutionContext, nfl_raw_projections_data: List[Tuple[str, str, str, str, str, Optional[int], str]]) -> dg.Output:
     """
@@ -278,7 +282,8 @@ def nfl_player_projections_loaded(context: dg.AssetExecutionContext, nfl_raw_pro
     required_resource_keys={POSTGRES_RESOURCE_KEY},
     # Depends on the load step finishing
     deps=[nfl_player_projections_loaded],
-    metadata={"target_table": TARGET_TABLE}
+    metadata={"target_table": TARGET_TABLE},
+    owners=_OWNERS,
 )
 def nfl_player_projections_formatted(context: dg.AssetExecutionContext) -> dg.Output:
     """

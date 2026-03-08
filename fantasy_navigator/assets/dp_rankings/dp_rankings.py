@@ -17,6 +17,7 @@ POSTGRES_RESOURCE_KEY = "postgres" # Matching your setup
 TARGET_TABLE = "dynastr.dp_player_ranks"
 SCHEMA_NAME = "dynastr" # Assuming schema exists
 DP_CSV_URL = "https://raw.githubusercontent.com/dynastyprocess/data/master/files/values.csv"
+_OWNERS = ["grayson.stream@gmail.com"]
 
 # --- Assets ---
 
@@ -24,6 +25,7 @@ DP_CSV_URL = "https://raw.githubusercontent.com/dynastyprocess/data/master/files
     name="dp_raw_player_data",
     description="Fetches and parses player value data from the DynastyProcess CSV file.",
     compute_kind="python",
+    owners=_OWNERS,
     metadata={"source": DP_CSV_URL}
 )
 def dp_raw_player_data(context: dg.AssetExecutionContext) -> list[list]:
@@ -132,9 +134,9 @@ def dp_raw_player_data(context: dg.AssetExecutionContext) -> list[list]:
     name="dp_player_ranks_loaded",
     description=f"Loads the parsed DynastyProcess player data into the {TARGET_TABLE} table.",
     compute_kind="postgres",
+    owners=_OWNERS,
     required_resource_keys={POSTGRES_RESOURCE_KEY},
     metadata={"target_table": TARGET_TABLE}
-    # Dependency inferred from input argument dp_raw_player_data
 )
 def dp_player_ranks_loaded(context: dg.AssetExecutionContext, dp_raw_player_data: list[list]) -> dg.Output:
     """
@@ -220,8 +222,8 @@ def dp_player_ranks_loaded(context: dg.AssetExecutionContext, dp_raw_player_data
     name="dp_player_ranks_formatted",
     description=f"Formats the player_first_name column in the {TARGET_TABLE} table.",
     compute_kind="postgres",
+    owners=_OWNERS,
     required_resource_keys={POSTGRES_RESOURCE_KEY},
-    # IMPORTANT: Depends on the DP load being finished
     deps=[dp_player_ranks_loaded],
     metadata={"target_table": TARGET_TABLE}
 )

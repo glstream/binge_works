@@ -1,7 +1,7 @@
 import dagster as dg
 import requests
 import json
-from datetime import datetime, timedelta # Keep timedelta if needed elsewhere
+from datetime import datetime # Keep datetime if needed elsewhere
 import os # Keep os if needed elsewhere
 # from psycopg2.extras import execute_batch # Import if needed by resource/fallback
 from typing import List, Dict, Any, Optional, Tuple
@@ -10,6 +10,8 @@ from typing import List, Dict, Any, Optional, Tuple
 POSTGRES_RESOURCE_KEY = "postgres" # Matching your setup
 TARGET_TABLE = "dynastr.espn_player_projections"
 SCHEMA_NAME = "dynastr" # Assuming schema exists
+
+_OWNERS = ["grayson.stream@gmail.com"]
 
 # Determine Season Year Dynamically
 # Use context execution time if available, otherwise use current time
@@ -64,7 +66,8 @@ def get_espn_stat(player_stats_list: list, stat_id: str, default=0):
     name="espn_raw_projections_data",
     description=f"Fetches {SEASON_YEAR} player projections from the ESPN API.",
     compute_kind="python",
-    metadata={"source": "fantasy.espn.com"}
+    metadata={"source": "fantasy.espn.com"},
+    owners=_OWNERS,
 )
 def espn_raw_projections_data(context: dg.AssetExecutionContext) -> Optional[List[Dict[str, Any]]]:
     """Fetches the raw player list from the ESPN API using configured filters."""
@@ -131,7 +134,8 @@ def espn_raw_projections_data(context: dg.AssetExecutionContext) -> Optional[Lis
     compute_kind="postgres",
     group_name="espn_projections",
     required_resource_keys={POSTGRES_RESOURCE_KEY},
-    metadata={"target_table": TARGET_TABLE}
+    metadata={"target_table": TARGET_TABLE},
+    owners=_OWNERS,
     # Dependency inferred from input argument espn_raw_projections_data
 )
 def espn_player_projections_loaded(context: dg.AssetExecutionContext, espn_raw_projections_data: Optional[List[Dict[str, Any]]]) -> dg.Output:
@@ -305,7 +309,8 @@ def espn_player_projections_loaded(context: dg.AssetExecutionContext, espn_raw_p
     required_resource_keys={POSTGRES_RESOURCE_KEY},
     # Depends on the load step finishing
     deps=[espn_player_projections_loaded],
-    metadata={"target_table": TARGET_TABLE}
+    metadata={"target_table": TARGET_TABLE},
+    owners=_OWNERS,
 )
 def espn_player_projections_formatted(context: dg.AssetExecutionContext) -> dg.Output:
     """
@@ -370,6 +375,8 @@ def espn_player_projections_formatted(context: dg.AssetExecutionContext) -> dg.O
     except Exception as e_main:
         context.log.error(f"Database error during formatting (connection method): {e_main}")
         raise dg.Failure(f"Failed to format {TARGET_TABLE}. Error: {e_main}")
+
+
 
 # --- Schedule Definition (Example - Based on Airflow @weekly) ---
 

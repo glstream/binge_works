@@ -3,15 +3,17 @@ import json
 import re
 import requests
 from bs4 import BeautifulSoup
-from datetime import datetime, timedelta
+from datetime import datetime
 
 TARGET_TABLE = "dynastr.ktc_player_ranks"
 SCHEMA_NAME = "dynastr"
+_OWNERS = ["grayson.stream@gmail.com"]
 
 @dg.asset(
     name="ktc_raw_player_data",
     description="Scrapes dynasty and redraft player data from KeepTradeCut.",
     compute_kind="python",
+    owners=_OWNERS,
     metadata={"source": "keeptradecut.com"}
 )
 def ktc_raw_player_data(context: dg.AssetExecutionContext) -> list[dict]:
@@ -89,6 +91,7 @@ def ktc_raw_player_data(context: dg.AssetExecutionContext) -> list[dict]:
     name="ktc_player_ranks_loaded",
     description=f"Loads the scraped KTC player data into the {TARGET_TABLE} table.",
     compute_kind="postgres",
+    owners=_OWNERS,
     required_resource_keys={"postgres"},
     metadata={"target_table": TARGET_TABLE}
 )
@@ -327,8 +330,8 @@ def ktc_player_ranks_loaded(context: dg.AssetExecutionContext, ktc_raw_player_da
     name="ktc_player_ranks_formatted",
     description=f"Formats the player_first_name column in the {TARGET_TABLE} table.",
     compute_kind="postgres",
+    owners=_OWNERS,
     required_resource_keys={"postgres"},
-    # Depends on the previous asset to ensure data is loaded first
     deps=[ktc_player_ranks_loaded],
     metadata={"target_table": TARGET_TABLE}
 )
@@ -384,8 +387,6 @@ def ktc_player_ranks_formatted(context: dg.AssetExecutionContext) -> dg.Output:
                 "column_formatted": "player_first_name"
             }
         )
-
     except Exception as e:
         context.log.error(f"Database error during formatting: {e}")
-        # Rollback happens automatically
         raise dg.Failure(f"Failed to format {TARGET_TABLE}. Error: {e}")

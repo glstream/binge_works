@@ -1,4 +1,15 @@
-from dagster import Definitions, load_assets_from_package_module
+from dagster import (
+    Definitions, 
+    load_assets_from_package_module, 
+    load_asset_checks_from_package_module,
+    FreshnessPolicy, 
+    apply_freshness_policy, 
+    asset, 
+    map_asset_specs
+    )
+
+from datetime import timedelta
+
 
 from binge_works.resources.PostgreSQLResource import PostgreSQLResource
 
@@ -31,8 +42,21 @@ from .assets import (
     cbs_projections,
     espn_projections,
     nfl_projections,
-    
+
     )
+
+from .checks import (
+    ktc_rankings_checks,
+    fc_rankings_checks,
+    dp_rankings_checks,
+    dd_rankings_checks,
+    fn_rankings_checks,
+    fn_rankings_history_checks,
+    ktc_rookie_picks_checks,
+    cbs_projections_checks,
+    espn_projections_checks,
+    nfl_projections_checks,
+)
 
 from .jobs.jobs import (
     ktc_rookies_job,
@@ -69,6 +93,18 @@ cbs_projections_assets = load_assets_from_package_module(cbs_projections, group_
 espn_projections_assets = load_assets_from_package_module(espn_projections, group_name=ESPN_PROJECTIONS)
 nfl_projections_assets = load_assets_from_package_module(nfl_projections, group_name=NFL_PROJECTIONS)
 
+# Asset checks
+ktc_rankings_checks = load_asset_checks_from_package_module(ktc_rankings_checks)
+fc_rankings_checks = load_asset_checks_from_package_module(fc_rankings_checks)
+dp_rankings_checks = load_asset_checks_from_package_module(dp_rankings_checks)
+dd_rankings_checks = load_asset_checks_from_package_module(dd_rankings_checks)
+fn_rankings_checks = load_asset_checks_from_package_module(fn_rankings_checks)
+fn_rankings_history_checks = load_asset_checks_from_package_module(fn_rankings_history_checks)
+ktc_rookie_picks_checks = load_asset_checks_from_package_module(ktc_rookie_picks_checks)
+cbs_projections_checks = load_asset_checks_from_package_module(cbs_projections_checks)
+espn_projections_checks = load_asset_checks_from_package_module(espn_projections_checks)
+nfl_projections_checks = load_asset_checks_from_package_module(nfl_projections_checks)
+
 # Load assets from modules
 asset_defs = [
     # rankings assets
@@ -84,6 +120,26 @@ asset_defs = [
     *espn_projections_assets,
     *nfl_projections_assets,
     ]
+
+policy = FreshnessPolicy.time_window(fail_window=timedelta(days=21), warn_window=timedelta(hours=24))
+
+assets_with_policies = map_asset_specs(
+    func=lambda spec: apply_freshness_policy(spec, policy), iterable=asset_defs
+)
+
+#asset check defs
+asset_check_defs = [
+    *ktc_rankings_checks,
+    *fc_rankings_checks,
+    *dp_rankings_checks,
+    *dd_rankings_checks,
+    *fn_rankings_checks,
+    *fn_rankings_history_checks,
+    *ktc_rookie_picks_checks,
+    *cbs_projections_checks,
+    *espn_projections_checks,
+    *nfl_projections_checks,
+]
 
 # jobs defintions
 jobs = [
@@ -113,9 +169,12 @@ resource_defs = {
 }
 
 
+
+
 defs = Definitions(
-    assets=asset_defs,
+    assets=assets_with_policies,
     resources=resource_defs,
     jobs=jobs,
     schedules=schedules,
+    asset_checks=asset_check_defs
 )

@@ -2,6 +2,7 @@ import dagster as dg
 import requests
 from datetime import datetime # Make sure datetime is imported
 from typing import Optional, List, Dict, Any # For type hinting
+import time
 
 # --- Configuration ---
 POSTGRES_RESOURCE_KEY = "postgres" # Matching your setup
@@ -9,6 +10,7 @@ TARGET_TABLE = "dynastr.dd_player_ranks"
 SCHEMA_NAME = "dynastr" # Assuming schema exists
 DD_REDRAFT_URL = "https://dynasty-daddy.com/api/v1/values/adp/redraft"
 DD_DYNASTY_URL = "https://dynasty-daddy.com/api/v1/values/adp/dynasty"
+_OWNERS = ["grayson.stream@gmail.com"]
 
 # Define the expected columns for the INSERT statement - ADD 'insert_date'
 # IMPORTANT: Make sure this order matches your table schema if using INSERT without explicit columns,
@@ -32,24 +34,35 @@ DD_TABLE_COLUMNS = [
     name="dd_raw_redraft_data",
     description="Fetches redraft player data from the Dynasty Daddy API.",
     compute_kind="python",
+    owners=_OWNERS,
     metadata={"source": "dynasty-daddy.com"}
 )
-def dd_raw_redraft_data(context: dg.AssetExecutionContext) -> Optional[List[Dict[str, Any]]]:
+def dd_raw_redraft_data(context: dg.AssetExecutionContext):
     """Fetches redraft data, returns list of dicts or None on failure."""
+    start_time = time.time()
     context.log.info(f"Fetching Dynasty Daddy redraft data from {DD_REDRAFT_URL}")
     try:
         response = requests.get(DD_REDRAFT_URL, timeout=30)
         if response.status_code == 200:
             data = response.json()
             context.log.info(f"Successfully fetched {len(data)} redraft records.")
-            return data
+            duration = time.time() - start_time
+            return dg.Output(
+                value=data,
+                metadata={
+                    "record_count": dg.MetadataValue.int(len(data)),
+                    "execution_time": dg.MetadataValue.float(duration),
+                }
+            )
         else:
             context.log.warning(f"API request failed with status {response.status_code}. Response: {response.text}")
             return None
+
     except requests.exceptions.RequestException as e:
         context.log.error(f"API request failed: {e}")
         # Optionally raise dg.Failure here if this data is critical
         return None
+
     except Exception as e:
         context.log.error(f"An unexpected error occurred during API fetch: {e}")
         return None
@@ -58,6 +71,7 @@ def dd_raw_redraft_data(context: dg.AssetExecutionContext) -> Optional[List[Dict
     name="dd_player_ranks_redraft_loaded",
     description=f"Loads the fetched Dynasty Daddy redraft data into the {TARGET_TABLE} table.",
     compute_kind="postgres",
+    owners=_OWNERS,
     required_resource_keys={POSTGRES_RESOURCE_KEY},
     deps=[dg.AssetKey("dd_raw_redraft_data")],
     metadata={"target_table": TARGET_TABLE, "load_type": "redraft"}
@@ -193,23 +207,34 @@ def dd_player_ranks_redraft_loaded(context: dg.AssetExecutionContext, dd_raw_red
     name="dd_raw_dynasty_data",
     description="Fetches dynasty player data from the Dynasty Daddy API.",
     compute_kind="python",
+    owners=_OWNERS,
     metadata={"source": "dynasty-daddy.com"}
 )
-def dd_raw_dynasty_data(context: dg.AssetExecutionContext) -> Optional[List[Dict[str, Any]]]:
+def dd_raw_dynasty_data(context: dg.AssetExecutionContext):
     """Fetches dynasty data, returns list of dicts or None on failure."""
     context.log.info(f"Fetching Dynasty Daddy dynasty data from {DD_DYNASTY_URL}")
+    start_time = time.time()
     try:
         response = requests.get(DD_DYNASTY_URL, timeout=30)
         if response.status_code == 200:
             data = response.json()
             context.log.info(f"Successfully fetched {len(data)} dynasty records.")
-            return data
+            duration = time.time() - start_time
+            return dg.Output(
+                value=data,
+                metadata={
+                    "record_count": dg.MetadataValue.int(len(data)),
+                    "execution_time": dg.MetadataValue.float(duration),
+                }
+            )
         else:
             context.log.warning(f"API request failed with status {response.status_code}. Response: {response.text}")
             return None
+
     except requests.exceptions.RequestException as e:
         context.log.error(f"API request failed: {e}")
         return None
+
     except Exception as e:
         context.log.error(f"An unexpected error occurred during API fetch: {e}")
         return None
@@ -218,6 +243,7 @@ def dd_raw_dynasty_data(context: dg.AssetExecutionContext) -> Optional[List[Dict
     name="dd_player_ranks_dynasty_loaded",
     description=f"Loads the fetched Dynasty Daddy dynasty data into the {TARGET_TABLE} table.",
     compute_kind="postgres",
+    owners=_OWNERS,
     required_resource_keys={POSTGRES_RESOURCE_KEY},
     metadata={"target_table": TARGET_TABLE, "load_type": "dynasty"},
 )
@@ -340,6 +366,7 @@ def dd_player_ranks_dynasty_loaded(context: dg.AssetExecutionContext, dd_raw_dyn
     name="dd_player_ranks_formatted",
     description=f"Formats the name_id column in the {TARGET_TABLE} table by deleting duplicates and renaming.",
     compute_kind="postgres",
+    owners=_OWNERS,
     required_resource_keys={POSTGRES_RESOURCE_KEY},
     deps=[dd_player_ranks_dynasty_loaded, dd_player_ranks_redraft_loaded],
     metadata={"target_table": TARGET_TABLE}

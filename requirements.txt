@@ -1,6 +1,6 @@
-dagster>=1.5.0
-dagit>=1.5.0
-dagster-graphql>=1.5.0
+dagster>=1.12.18
+dagit>=1.12.17
+dagster-graphql>=1.12.18
 dagster-postgres  # Correct package name for PostgreSQL integration
 psycopg2-binary>=2.9.6     # PostgreSQL driver
 requests>=2.31.0           # For API calls
