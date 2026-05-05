@@ -38,7 +38,7 @@ def raw_player_asset_values(context: dg.OpExecutionContext) -> dg.Output[pd.Data
     select *
     from dynastr.ktc_player_ranks ktc 
     where 1=1
-    and (ktc.player_full_name like '%2025 Round%' or ktc.position = 'RDP') 
+    and (ktc.player_full_name like '%2026 Round%' or ktc.position = 'RDP') 
     ),
     dp_picks as (
         select 
@@ -129,7 +129,7 @@ AND rank_type = 'dynasty'
     left join dp_picks dp on lower(ktc.player_full_name) = lower(dp.player_full_name)
     left join dd_picks dd on lower(ktc.player_full_name) = lower(dd.player_full_name)
     where 1=1
-    and (ktc.player_full_name like '%2025 Round%' or ktc.position = 'RDP')
+    and (ktc.player_full_name like '%2026 Round%' or ktc.position = 'RDP')
         )
 
     select
