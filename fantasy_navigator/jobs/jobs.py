@@ -1,6 +1,18 @@
 import dagster as dg
 
 
+# player sync jobs
+sleeper_players_job = dg.define_asset_job(
+    name="sleeper_players_job",
+    selection=["sleeper_raw_player_data", "load_sleeper_players"],
+    description="Job to sync NFL player data from Sleeper API into dynastr.players",
+    op_retry_policy=dg.RetryPolicy(
+        max_retries=3,
+        delay=60,
+        backoff=dg.Backoff.EXPONENTIAL,
+    ),
+)
+
 # rookie jobs
 ktc_rookies_job = dg.define_asset_job(
     name="ktc_rookies_job",
@@ -50,6 +62,10 @@ nfl_projections_job = dg.define_asset_job(
 fantasy_navigator_job = dg.define_asset_job(
     name="fantasy_navigator_job",
     selection=[
+        # Sleeper player sync
+        "sleeper_raw_player_data",
+        "load_sleeper_players",
+        # KTC Rookie Picks
         "extract_one_qb_ktc_rookie_picks",
         "load_one_qb_ktc_rookie_picks",
         "extract_sf_ktc_rookie_picks",
@@ -93,6 +109,10 @@ fantasy_navigator_job = dg.define_asset_job(
 fantasy_navigator_hist_job = dg.define_asset_job(
     name="fantasy_navigator_hist_job",
     selection=[
+        # Sleeper player sync
+        "sleeper_raw_player_data",
+        "load_sleeper_players",
+        # KTC Rookie Picks
         "extract_one_qb_ktc_rookie_picks",
         "load_one_qb_ktc_rookie_picks",
         "extract_sf_ktc_rookie_picks",

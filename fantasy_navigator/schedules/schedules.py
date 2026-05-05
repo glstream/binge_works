@@ -1,11 +1,20 @@
 import dagster as dg
 from ..jobs.jobs import (
+    sleeper_players_job,
     ktc_rookies_job,
     fantasy_navigator_job,
     cbs_projections_job,
     espn_projections_job,
     nfl_projections_job,
     fantasy_navigator_hist_job
+)
+
+# player sync schedule
+sleeper_players_schedule = dg.ScheduleDefinition(
+    name="weekly_sleeper_players",
+    cron_schedule="0 12 * * 1",  # Run at 12:00 UTC every Monday (before rankings)
+    job=sleeper_players_job,
+    description="Sync NFL player data from Sleeper API weekly on Monday at 12:00 UTC"
 )
 
 # define rookie schedules

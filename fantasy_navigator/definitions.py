@@ -16,6 +16,8 @@ from binge_works.resources.PostgreSQLResource import PostgreSQLResource
 
 from .constants import (
     postgres_connection_string,
+    #PLAYERS
+    SLEEPER_PLAYERS,
     #RANKINGS
     KTC_ROOKIE_PICKS,
     FN_RANKINGS,
@@ -31,6 +33,7 @@ from .constants import (
 
 )
 from .assets import (
+    sleeper_players,
     ktc_rookie_picks,
     fn_rankings,
     ktc_rankings,
@@ -59,6 +62,7 @@ from .checks import (
 )
 
 from .jobs.jobs import (
+    sleeper_players_job,
     ktc_rookies_job,
     fantasy_navigator_job,
     fantasy_navigator_hist_job,
@@ -66,9 +70,10 @@ from .jobs.jobs import (
     cbs_projections_job,
     espn_projections_job,
     nfl_projections_job,
-    
+
 )
 from .schedules.schedules import (
+    sleeper_players_schedule,
     ktc_rookies_schedule,
     fantasy_navigator_schedule,
     fantasy_navigator_hist_schedule,
@@ -76,6 +81,9 @@ from .schedules.schedules import (
     espn_projections_schedule,
     nfl_projections_schedule,
 )
+
+# player assets
+sleeper_players_assets = load_assets_from_package_module(sleeper_players, group_name=SLEEPER_PLAYERS)
 
 # rookie assets
 ktc_rookie_picks_assets = load_assets_from_package_module(ktc_rookie_picks, group_name=KTC_ROOKIE_PICKS)
@@ -107,6 +115,8 @@ nfl_projections_checks = load_asset_checks_from_package_module(nfl_projections_c
 
 # Load assets from modules
 asset_defs = [
+    # player assets
+    *sleeper_players_assets,
     # rankings assets
     *ktc_rookie_picks_assets,
     *fn_rankings_assets,
@@ -143,6 +153,7 @@ asset_check_defs = [
 
 # jobs defintions
 jobs = [
+    sleeper_players_job,
     ktc_rookies_job,
     fantasy_navigator_job,
     fantasy_navigator_hist_job,
@@ -153,6 +164,7 @@ jobs = [
 ]
 # schedules definitions
 schedules = [
+    sleeper_players_schedule,
     ktc_rookies_schedule,
     fantasy_navigator_schedule,
     cbs_projections_schedule,

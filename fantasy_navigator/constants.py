@@ -18,6 +18,9 @@ encoded_password = urllib.parse.quote_plus(db_password)
 postgres_connection_string = f"postgresql://{db_user}:{encoded_password}@{db_host}:{db_port}/{db_name}?sslmode={sslmode}"
 
 
+# Player sources
+SLEEPER_PLAYERS = "sleeper_players"
+
 # Rankings sources
 KTC_ROOKIE_PICKS = "ktc_rookie_picks"
 FN_RANKINGS = "fantasy_navigator_rankings"

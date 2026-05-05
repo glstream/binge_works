@@ -17,6 +17,7 @@ _OWNERS = ["grayson.stream@gmail.com"]
     required_resource_keys={"postgres"},
     op_tags={"layer": "staging", "source": "postgres"},
     deps=[
+        dg.AssetKey("load_sleeper_players"),
         dg.AssetKey("load_sf_ktc_rookie_picks"),
         dg.AssetKey("load_one_qb_ktc_rookie_picks"),
         dg.AssetKey("ktc_player_ranks_formatted"),
@@ -103,9 +104,9 @@ AND rank_type = 'dynasty'
 
     from dynastr.players p
     inner join (select player_first_name, player_last_name, team, age, ktc_player_id, sf_value, one_qb_value from dynastr.ktc_player_ranks where rank_type = 'dynasty') ktc on lower(concat(p.first_name, p.last_name)) = lower(concat(ktc.player_first_name, ktc.player_last_name))
-    inner join (select sleeper_player_id, sf_value, one_qb_value from dynastr.fc_player_ranks where rank_type = 'dynasty') fc on fc.sleeper_player_id = p.player_id 
-    inner join dynastr.dp_player_ranks dp on lower(concat(p.first_name, p.last_name)) = lower(concat(dp.player_first_name, dp.player_last_name))
-    inner join (select name_id, sf_trade_value, trade_value from dynastr.dd_player_ranks where rank_type = 'dynasty') dd on lower(concat(p.first_name,p.last_name, p.player_position)) = dd.name_id
+    left join (select sleeper_player_id, sf_value, one_qb_value from dynastr.fc_player_ranks where rank_type = 'dynasty') fc on fc.sleeper_player_id = p.player_id
+    left join dynastr.dp_player_ranks dp on lower(concat(p.first_name, p.last_name)) = lower(concat(dp.player_first_name, dp.player_last_name))
+    left join (select name_id, sf_trade_value, trade_value from dynastr.dd_player_ranks where rank_type = 'dynasty') dd on lower(concat(p.first_name,p.last_name, p.player_position)) = dd.name_id
 
     UNION ALL 
 
