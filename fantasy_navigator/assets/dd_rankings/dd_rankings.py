@@ -384,8 +384,7 @@ def dd_player_ranks_formatted(context: dg.AssetExecutionContext) -> dg.Output:
     context.log.info(f"Starting formatting for name_id in {TARGET_TABLE} using delete-then-update strategy.")
     
     replacements = [
-        ('camwardqb', 'cameronwardqb'), 
-        ('amonrastbrownwr', 'amon-rabrownwr'), 
+        ('amonrastbrownwr', 'amon-rabrownwr'),
         ('jaxonsmithnjigbawr', 'jaxonsmith-njigbawr')
     ]
     

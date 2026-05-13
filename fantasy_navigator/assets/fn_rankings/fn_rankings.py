@@ -105,7 +105,7 @@ AND rank_type = 'dynasty'
     from dynastr.players p
     inner join (select player_first_name, player_last_name, team, age, ktc_player_id, sf_value, one_qb_value from dynastr.ktc_player_ranks where rank_type = 'dynasty') ktc on lower(concat(p.first_name, p.last_name)) = lower(concat(ktc.player_first_name, ktc.player_last_name))
     left join (select sleeper_player_id, sf_value, one_qb_value from dynastr.fc_player_ranks where rank_type = 'dynasty') fc on fc.sleeper_player_id = p.player_id
-    left join dynastr.dp_player_ranks dp on lower(concat(p.first_name, p.last_name)) = lower(concat(dp.player_first_name, dp.player_last_name))
+    left join (select player_first_name, player_last_name, sf_value, one_qb_value from dynastr.dp_player_ranks where player_position != 'PICK') dp on lower(concat(p.first_name, p.last_name)) = lower(concat(dp.player_first_name, dp.player_last_name))
     left join (select name_id, sf_trade_value, trade_value from dynastr.dd_player_ranks where rank_type = 'dynasty') dd on lower(concat(p.first_name,p.last_name, p.player_position)) = dd.name_id
 
     UNION ALL 
@@ -619,7 +619,7 @@ def fn_player_ranks_formatted(context: dg.AssetExecutionContext) -> dg.Output:
 
     # SQL formatting logic from surrogate_key_formatting Airflow task
     # Using parameterized query for safety and readability
-    replacements = [ ('Cam Ward', 'Cameron Ward'),
+    replacements = [
     ]
 
     update_expr = "player_full_name"

@@ -135,7 +135,7 @@ def ktc_player_ranks_loaded(context: dg.AssetExecutionContext, ktc_raw_player_da
         try:
             # Basic cleaning similar to Airflow task
             player_name = ktc_player["playerName"]
-            first_name = player_name.split(" ")[0].replace("Cam", "Cameron")
+            first_name = player_name.split(" ")[0]
             # More robust last name extraction needed if names are complex
             # Handle suffixes like Jr., III, II, etc. and remove apostrophes
             last_name_parts = replace_special_characters(player_name).split(" ")
