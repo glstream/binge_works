@@ -36,10 +36,26 @@ def raw_player_asset_values(context: dg.OpExecutionContext) -> dg.Output[pd.Data
     
     query = """
     with ktc_picks as (
-    select *
-    from dynastr.ktc_player_ranks ktc 
+    select *,
+        CASE
+            WHEN player_full_name ~ '^[0-9]{4} Round [0-9]+ Pick [0-9]+$' THEN
+                substring(player_full_name from 1 for 4) || ' ' ||
+                CASE
+                    WHEN CAST(substring(player_full_name from 'Pick ([0-9]+)$') AS int) <= 4 THEN 'Early'
+                    WHEN CAST(substring(player_full_name from 'Pick ([0-9]+)$') AS int) <= 8 THEN 'Mid'
+                    ELSE 'Late'
+                END || ' ' ||
+                CASE
+                    WHEN substring(player_full_name from 'Round ([0-9]+)') = '1' THEN '1st'
+                    WHEN substring(player_full_name from 'Round ([0-9]+)') = '2' THEN '2nd'
+                    WHEN substring(player_full_name from 'Round ([0-9]+)') = '3' THEN '3rd'
+                    ELSE '4th'
+                END
+            ELSE player_full_name
+        END as pick_bucket_name
+    from dynastr.ktc_player_ranks ktc
     where 1=1
-    and (ktc.player_full_name like '%2026 Round%' or ktc.position = 'RDP') 
+    and (ktc.player_full_name like '%2026 Round%' or ktc.position = 'RDP')
     ),
     dp_picks as (
         select 
@@ -116,19 +132,19 @@ AND rank_type = 'dynasty'
     , null as age
     ,ktc.sf_value as ktc_sf_value
     ,ktc.one_qb_value as ktc_one_qb_value
-    ,coalesce(fc.sf_value, ktc.sf_value) as fc_sf_value
-    ,coalesce(fc.one_qb_value, ktc.one_qb_value) as fc_one_qb_value
-    ,coalesce(dp.sf_value, ktc.sf_value) as dp_sf_value
-    ,coalesce(dp.one_qb_value, ktc.one_qb_value) as dp_one_qb_value
-    ,coalesce(dd.sf_value, ktc.sf_value) as dd_sf_value -- Use value from dd_picks
-    ,coalesce(dd.one_qb_value, ktc.one_qb_value) as dd_one_qb_value -- Use value from dd_picks
+    ,fc.sf_value as fc_sf_value
+    ,fc.one_qb_value as fc_one_qb_value
+    ,dp.sf_value as dp_sf_value
+    ,dp.one_qb_value as dp_one_qb_value
+    ,dd.sf_value as dd_sf_value
+    ,dd.one_qb_value as dd_one_qb_value
     , CASE WHEN substring(lower(ktc.player_full_name) from 6 for 5) = 'round' THEN 'Pick' 
         WHEN position = 'RDP' THEN 'Pick'
         ELSE position END as _position
     from ktc_picks ktc
-    left join fc_picks fc on lower(ktc.player_full_name) = lower(fc.player_full_name)
-    left join dp_picks dp on lower(ktc.player_full_name) = lower(dp.player_full_name)
-    left join dd_picks dd on lower(ktc.player_full_name) = lower(dd.player_full_name)
+    left join fc_picks fc on lower(ktc.pick_bucket_name) = lower(fc.player_full_name)
+    left join dp_picks dp on lower(ktc.pick_bucket_name) = lower(dp.player_full_name)
+    left join dd_picks dd on lower(ktc.pick_bucket_name) = lower(dd.player_full_name)
     where 1=1
     and (ktc.player_full_name like '%2026 Round%' or ktc.position = 'RDP')
         )
@@ -262,6 +278,50 @@ def processed_player_ranks(context: dg.OpExecutionContext, raw_player_asset_valu
     values_df['superflex_one_qb_value'] = values_df[one_qb_norm_cols].apply(
         lambda row: hmean(row[row > 0]) if any(row > 0) else 0.0, axis=1
     )
+
+    # --- Step 3: Enforce descending pick order ---
+    # After harmonization, ensure draft picks descend properly: Round 1 > Round 2 > Round 3 > Round 4,
+    # and within each round: Pick 1 > Pick 2 > ... > Pick 12.
+    # If a pick's value is >= the pick above it in draft order, set it to (previous_value - 1).
+    context.log.info("Enforcing descending order for draft pick values.")
+    for value_col in ['superflex_sf_value', 'superflex_one_qb_value']:
+        pick_mask = values_df['_position'] == 'Pick'
+        picks = values_df.loc[pick_mask].copy()
+
+        if picks.empty:
+            continue
+
+        # Extract year, round, and pick numbers from "YYYY Round X Pick Y" format
+        picks['_year'] = picks['player_full_name'].str.extract(r'^(\d{4})')
+        picks['_round_num'] = picks['player_full_name'].str.extract(r'Round (\d+)')
+        picks['_pick_num'] = picks['player_full_name'].str.extract(r'Pick (\d+)')
+
+        valid = picks['_round_num'].notna() & picks['_pick_num'].notna()
+        valid_picks = picks[valid].copy()
+
+        if valid_picks.empty:
+            continue
+
+        valid_picks['_year'] = valid_picks['_year'].astype(int)
+        valid_picks['_round_num'] = valid_picks['_round_num'].astype(int)
+        valid_picks['_pick_num'] = valid_picks['_pick_num'].astype(int)
+
+        # Walk through picks in natural draft order (round 1 pick 1 first) per year
+        # and force each value to be strictly less than the previous
+        for year in valid_picks['_year'].unique():
+            year_picks = valid_picks[valid_picks['_year'] == year].sort_values(
+                ['_round_num', '_pick_num']
+            )
+
+            prev_value = None
+            for idx in year_picks.index:
+                current_val = values_df.loc[idx, value_col]
+                if prev_value is not None and current_val >= prev_value:
+                    current_val = prev_value - 1
+                    values_df.loc[idx, value_col] = current_val
+                prev_value = current_val
+
+    context.log.info("Draft pick order enforcement complete.")
 
     # Rank based on harmonic mean values
     values_df['superflex_sf_rank'] = values_df['superflex_sf_value'].rank(ascending=False, method='min').fillna(0).astype(int)
